@@ -10,4 +10,4 @@ RUN bundle config set --local path "vendor" \
 
 COPY --chown=dependabot:dependabot . ${CODE_DIR}
 
-CMD ["bundle", "exec", "ruby", "./generic-update-script.rb"]
+CMD ["bundle", "exec", "ruby", "./bitbucket-update-script.rb"]
