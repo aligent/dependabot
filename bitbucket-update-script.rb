@@ -6,7 +6,6 @@ require "dependabot/update_checkers"
 require "dependabot/file_updaters"
 require "dependabot/pull_request_creator"
 require "dependabot/omnibus"
-include DebugHelper
 
 unless ENV.has_key?("BITBUCKET_APP_USERNAME")
   raise 'BITBUCKET_APP_USERNAME has not been set.'
@@ -116,39 +115,37 @@ dependencies.select(&:top_level?).each do |dep|
     requirements_to_unlock: requirements_to_unlock
   )
 
-  puts "#{dep.name} should be updated from #{dep.version}"
+  #####################################
+  # Generate updated dependency files #
+  #####################################
+  print "  - Updating #{dep.name} (from #{dep.version})…"
+  updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
+    dependencies: updated_deps,
+    dependency_files: files,
+    credentials: credentials,
+  )
 
-  # #####################################
-  # # Generate updated dependency files #
-  # #####################################
-  # print "  - Updating #{dep.name} (from #{dep.version})…"
-  # updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
-  #   dependencies: updated_deps,
-  #   dependency_files: files,
-  #   credentials: credentials,
-  # )
+  updated_files = updater.updated_dependency_files
 
-  # updated_files = updater.updated_dependency_files
+  ########################################
+  # Create a pull request for the update #
+  ########################################
+  assignee = (ENV["PULL_REQUESTS_ASSIGNEE"])&.to_i
+  assignees = assignee ? [assignee] : assignee
+  pr_creator = Dependabot::PullRequestCreator.new(
+    source: source,
+    base_commit: commit,
+    dependencies: updated_deps,
+    files: updated_files,
+    credentials: credentials,
+    assignees: assignees,
+    author_details: { name: "Dependabot", email: "no-reply@github.com" },
+    label_language: true,
+  )
+  pull_request = pr_creator.create
+  puts " submitted"
 
-  # ########################################
-  # # Create a pull request for the update #
-  # ########################################
-  # assignee = (ENV["PULL_REQUESTS_ASSIGNEE"])&.to_i
-  # assignees = assignee ? [assignee] : assignee
-  # pr_creator = Dependabot::PullRequestCreator.new(
-  #   source: source,
-  #   base_commit: commit,
-  #   dependencies: updated_deps,
-  #   files: updated_files,
-  #   credentials: credentials,
-  #   assignees: assignees,
-  #   author_details: { name: "Dependabot", email: "no-reply@github.com" },
-  #   label_language: true,
-  # )
-  # pull_request = pr_creator.create
-  # puts " submitted"
-
-  # next unless pull_request
+  next unless pull_request
 end
 
 puts "Done"
