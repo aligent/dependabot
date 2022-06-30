@@ -1,24 +1,14 @@
 name: Run
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
-  test-run:
-    name: Dependabot ${{ matrix.package_manager }}
+  test-build:
+    name: Dependabot Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package_manager: [bundler]
     steps:
       - uses: actions/checkout@v2
       - name: Prepare environment variables
-        run: echo "IMAGE_NAME=dependabot/dependabot-script" >> $GITHUB_ENV
+        run: echo "IMAGE_NAME=aligent/dependabot-pipe" >> $GITHUB_ENV
       - name: Build Dockerfile
         run: docker build -t "$IMAGE_NAME" -f Dockerfile .
-      - name: Run ${{ matrix.package_manager }} tests
-        run: |
-          docker run --rm \
-            --env "GITHUB_ACCESS_TOKEN=${{ secrets.GITHUB_TOKEN }}" \
-            --env "PROJECT_PATH=${{ github.repository }}" \
-            --env "PACKAGE_MANAGER=${{ matrix.package_manager }}" \
-            "$IMAGE_NAME"
