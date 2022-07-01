@@ -43,8 +43,8 @@ repo_name = ENV["BITBUCKET_REPO_FULL_NAME"] # namespace/project
 # Directory where the base dependency files are.
 directory = ENV["DIRECTORY_PATH"] || "/"
 
-# Branch to look at. Defaults to repo's default branch
-branch = ENV["BRANCH"]
+# Branch to look at. Pulled from default Bitbucket env vars, defaults to repo's default branch
+branch = ENV["BITBUCKET_BRANCH"]
 
 # Name of the package manager you'd like to do the update for. Options are:
 # - bundler
