@@ -26,6 +26,17 @@ credentials = [
   }
 ]
 
+if ENV.has_key?("GITHUB_ACCESS_TOKEN")
+  credentials << {
+    "type" => "git_source",
+    "host" => "github.com",
+    "username" => "x-access-token",
+    "password" => ENV["GITHUB_ACCESS_TOKEN"] # A GitHub access token with read access to public repos
+  }
+else 
+  puts "No GITHUB_ACCESS_TOKEN found, you may run into issues with github API rate limits."
+end
+
 # Full name of the repo you want to create pull requests for.
 repo_name = ENV["BITBUCKET_REPO_FULL_NAME"] # namespace/project
 
