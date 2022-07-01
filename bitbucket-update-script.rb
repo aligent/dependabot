@@ -10,25 +10,19 @@ require "dependabot/omnibus"
 credentials = []
 bitbucket_hostname = ENV["BITBUCKET_HOSTNAME"] || "bitbucket.org"
 
-if ENV.has_key?("CI")
-  # We are in a bitbucket pipe use the built in auth proxy
-  ENV["HTTP_PROXY"] = 'http://host.docker.internal:29418'
-else 
-  # Fallback to using credential
-  unless ENV.has_key?("BITBUCKET_APP_USERNAME")
-    raise 'BITBUCKET_APP_USERNAME has not been set.'
-  end 
-  
-  unless ENV.has_key?("BITBUCKET_APP_PASSWORD")
-    raise 'BITBUCKET_APP_PASSWORD has not been set.'
-  end 
-  credentials << {
-      "type" => "git_source",
-      "host" => bitbucket_hostname,
-      "username" => ENV["BITBUCKET_APP_USERNAME"],
-      "password" => ENV["BITBUCKET_APP_PASSWORD"]
-    }
-end
+unless ENV.has_key?("BITBUCKET_APP_USERNAME")
+  raise 'BITBUCKET_APP_USERNAME has not been set.'
+end 
+
+unless ENV.has_key?("BITBUCKET_APP_PASSWORD")
+  raise 'BITBUCKET_APP_PASSWORD has not been set.'
+end 
+credentials << {
+    "type" => "git_source",
+    "host" => bitbucket_hostname,
+    "username" => ENV["BITBUCKET_APP_USERNAME"],
+    "password" => ENV["BITBUCKET_APP_PASSWORD"]
+  }
 
 if ENV.has_key?("GITHUB_ACCESS_TOKEN")
   credentials << {
