@@ -1,0 +1,11 @@
+name: Aligent Dependabot Pipe
+image: aligent/dependabot-pipe:latest
+description: This pipe is used to run dependabot against bitbucket repositories
+repository: git@github.com:aligent/dependabot-pipe.git 
+maintainer: adam.hall@aligent.com.au
+tags:
+    - bitbucket-pipelines
+    - pipes
+    - ruby
+    - dependabot
+  
