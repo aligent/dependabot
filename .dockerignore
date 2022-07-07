@@ -2,3 +2,5 @@
 /.github
 /native-helpers
 /tmp
+/vendor
+/.solargraph.yml
