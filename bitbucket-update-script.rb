@@ -6,6 +6,9 @@ require "dependabot/update_checkers"
 require "dependabot/file_updaters"
 require "dependabot/pull_request_creator"
 require "dependabot/omnibus"
+require 'yaml'
+require "awesome_print"
+require_relative "config_schema"
 
 credentials = []
 bitbucket_hostname = ENV["BITBUCKET_HOSTNAME"] || "bitbucket.org"
@@ -17,6 +20,7 @@ end
 unless ENV.has_key?("BITBUCKET_APP_PASSWORD")
   raise 'BITBUCKET_APP_PASSWORD has not been set.'
 end 
+
 credentials << {
     "type" => "git_source",
     "host" => bitbucket_hostname,
@@ -44,6 +48,31 @@ directory = ENV["DIRECTORY_PATH"] || "/"
 # Branch to look at. Pulled from default Bitbucket env vars, defaults to repo's default branch
 branch = ENV["BITBUCKET_BRANCH"]
 
+# Load configuration from mounted repository
+unless ENV.has_key?("REPOSITORY_PATH")
+  raise 'REPOSITORY_PATH has not been set.'
+end 
+
+configuration_path = ENV["REPOSITORY_PATH"] + '/dependabot.yml'
+
+if File.file?(configuration_path)
+  configuration = YAML.load_file(configuration_path)
+
+  # Validate configuration against schema
+  errors = DependabotConfigurationSchema.call(configuration).errors(full: true).to_h
+  
+  unless errors.empty?()
+    puts "Invalid Configuration: "
+    ap errors, options = {index: false}
+    raise "Invalid Configuration."
+  end
+
+  puts "dependabot.yml found, configuration loaded."
+else
+  configuration = {}
+  puts "dependabot.yml not found, falling back to default configuration."
+end
+
 # Name of the package manager you'd like to do the update for. Options are:
 # - bundler
 # - pip (includes pipenv)
@@ -60,7 +89,7 @@ branch = ENV["BITBUCKET_BRANCH"]
 # - submodules
 # - docker
 # - terraform
-package_manager = ENV["PACKAGE_MANAGER"] || "composer"
+package_manager = configuration.has_key?('package_manager') ? configuration['package_manager'] : (ENV["PACKAGE_MANAGER"] || "composer")
 
 source = Dependabot::Source.new(
   provider: "bitbucket",
@@ -96,7 +125,18 @@ parser = Dependabot::FileParsers.for_package_manager(package_manager).new(
 
 dependencies = parser.parse
 
+ignored_versions = configuration["ignored_versions"] || {}
+
 dependencies.select(&:top_level?).each do |dep|
+  puts "Checking for updates to #{dep.name} (Current Version: #{dep.version})..."
+
+  # Check if there are any versions of this package to ignore
+  ignored = ignored_versions.find { |package| package['name'] == dep.name}
+
+  if !ignored.nil? && !ignored.empty?
+    puts "Ignoring versions: #{ignored['versions'].join(',')}"
+  end
+
   #########################################
   # Get update details for the dependency #
   #########################################
@@ -104,6 +144,7 @@ dependencies.select(&:top_level?).each do |dep|
     dependency: dep,
     dependency_files: files,
     credentials: credentials,
+    ignored_versions: !ignored.nil? ? ignored['versions'] : []
   )
 
   next if checker.up_to_date?
@@ -123,11 +164,14 @@ dependencies.select(&:top_level?).each do |dep|
   updated_deps = checker.updated_dependencies(
     requirements_to_unlock: requirements_to_unlock
   )
+  
+  updated_deps.select(&:top_level?).each do |updated_dep|
+    puts "Updating #{updated_dep.name} to #{updated_dep.version}..."
+  end
 
   #####################################
   # Generate updated dependency files #
   #####################################
-  print "  - Updating #{dep.name} (from #{dep.version})…"
   updater = Dependabot::FileUpdaters.for_package_manager(package_manager).new(
     dependencies: updated_deps,
     dependency_files: files,
@@ -139,15 +183,12 @@ dependencies.select(&:top_level?).each do |dep|
   ########################################
   # Create a pull request for the update #
   ########################################
-  assignee = (ENV["PULL_REQUESTS_ASSIGNEE"])&.to_i
-  assignees = assignee ? [assignee] : assignee
   pr_creator = Dependabot::PullRequestCreator.new(
     source: source,
     base_commit: commit,
     dependencies: updated_deps,
     files: updated_files,
     credentials: credentials,
-    assignees: assignees,
     author_details: { name: "Dependabot", email: "no-reply@github.com" },
     label_language: true,
   )
