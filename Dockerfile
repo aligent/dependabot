@@ -1,4 +1,4 @@
-FROM dependabot/dependabot-core:0.196.2
+FROM dependabot/dependabot-core:0.202.0
 
 ARG CODE_DIR=/home/dependabot/dependabot-pipeline
 ENV CODE_DIR=${CODE_DIR}
